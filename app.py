@@ -73,12 +73,15 @@ def removeUser():
 def addcoment():
     if dbcontroll.documentExists("comments") and (len(request.form['nome']) > 0) and (len(request.form['conteudo']) > 0):
         comments = dbcontroll.getDocument("comments")
-        print(request.form['pub'])
+        #print(request.form['pub'])
         item = comments.getItem(request.form['pub'])
-        if item == 'false':
+        #print(item)
+        if item == False:
+            
             comments.insertItem(request.form['pub'], {})
-
+        #print(comments.get())
         pub = comments.getItem(request.form['pub'])
+        #print(pub)
         id = shortuuid.uuid()
         pub.insertProperty(id, generateComment(id, request.form))
         return "200"
