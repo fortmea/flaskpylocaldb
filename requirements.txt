@@ -1,8 +1,9 @@
 APScheduler==3.9.1
 Flask[async]==2.0.3
-Flask-Limiter==1.5
+Flask-Limiter==2.4.5
 pylocaldatabase==1.0.4
 shortuuid==1.0.9
 Werkzeug==2.0.3
 gunicorn==20.1.0
 flask-cors==3.0.10
+typing_extensions<4.0.0,>=3.7.4

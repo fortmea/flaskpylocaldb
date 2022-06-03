@@ -7,7 +7,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS, cross_origin
-
+import random
 dbcontroll = pylocaldatabase.databasecontroller(path="database.json")
 scheduler = BackgroundScheduler()
 app = Flask(__name__)
@@ -114,3 +114,9 @@ def load():
                       trigger="interval", seconds=60)
     scheduler.start()
     print("ok")
+
+if __name__ == "__main__":  
+	app.run( 
+		host='0.0.0.0', 
+		port=random.randint(2000, 9000)  
+	)
