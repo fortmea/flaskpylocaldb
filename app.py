@@ -16,9 +16,15 @@ limiter = Limiter(
 )
 print(__name__)
 
+
 @app.route("/")
 def main():
     return "Olá, Mundo!"
+
+
+@app.route("/all")
+def all():
+    return dbcontroll.getDocument("comments").get()
 
 
 @limiter.limit("1/second", override_defaults=False)
