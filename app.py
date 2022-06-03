@@ -32,7 +32,7 @@ async def comments():
     if dbcontroll.documentExists("comments"):
         if request.args.get("id"):
             data = json.dumps(dbcontroll.getDocument("comments").getItem(
-                request.args['id']).get(), default=pylocaldatabase.databasecontroller.serialize)
+                request.args['id']), default=pylocaldatabase.databasecontroller.serialize)
             print(data)
             return data
         else:
