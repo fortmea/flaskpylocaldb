@@ -110,6 +110,3 @@ def load():
                       trigger="interval", seconds=60)
     scheduler.start()
     print("ok")
-
-if __name__ == "app":
-    app.run(host='0.0.0.0', port=8080)
