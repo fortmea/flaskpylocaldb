@@ -3,52 +3,113 @@ from pylocaldatabase import pylocaldatabase
 import atexit
 from flask import Flask, request, escape
 import shortuuid
+from apscheduler.schedulers.background import BackgroundScheduler
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 dbcontroll = pylocaldatabase.databasecontroller(path="database.json")
+scheduler = BackgroundScheduler()
 app = Flask(__name__)
-
+limiter = Limiter(
+    app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+print(__name__)
 
 @app.route("/")
 def main():
     return "Olá, Mundo!"
 
 
-@app.route("/users")
-def users():
-    if dbcontroll.documentExists("users"):
-        return json.dumps(dbcontroll.getDocument("users").get(), default=pylocaldatabase.databasecontroller.serialize)
+@limiter.limit("1/second", override_defaults=False)
+@app.route("/comments/list/")
+def comments():
+    if dbcontroll.documentExists("comments"):
+        if request.args.get("id"):
+            data = json.dumps(dbcontroll.getDocument("comments").getItem(
+                request.args['id']).get(), default=pylocaldatabase.databasecontroller.serialize)
+            if data == '{"Err": true}':
+                return {"nope": {}}
+            else:
+                return data
+        else:
+            return json.dumps(dbcontroll.getDocument("comments").get(), default=pylocaldatabase.databasecontroller.serialize)
     else:
-        return "No users found."
+        return "No comments found."
 
 
-@app.post("/users")
-def adduser():
-    print(dbcontroll.getDocument("users"))
-    print(dbcontroll.documentExists("users"))
-    if dbcontroll.documentExists("users") and (len(request.form['nome']) > 0):
-        users = dbcontroll.getDocument("users")
-        users.insertItem(shortuuid.uuid(), generateUser(request.form))
+# def checkUserEmail(email):
+#    users = dbcontroll.getDocument("users").get()
+#    for x in users:
+#        if users.get(x).get()['email'] == email:
+#            return True
+#        else:
+#            return False
+
+
+@app.post("/comments/remove")
+def removeUser():
+    try:
+        dbcontroll.getDocument("comments").removeItem(request.form['id'])
+        return "200"
+    except:
+        return "400"
+
+
+# @app.post("/users/update")
+# def upduser():
+#    try:
+#        user = dbcontroll.getDocument("users").getItem(request.form['id'])
+#        nUserData = generateComment(request.form)
+#        for x in nUserData:
+#            user.insertProperty(x, nUserData[x])
+#        return "200"
+#    except:
+#        return "400"
+
+@limiter.limit("1/second", override_defaults=False)
+@app.post("/comments")
+def addcoment():
+    if dbcontroll.documentExists("comments") and (len(request.form['nome']) > 0) and (len(request.form['conteudo']) > 0):
+        comments = dbcontroll.getDocument("comments")
+        print(request.form['pub'])
+        item = comments.getItem(request.form['pub']).get()
+        if item == {"Err": True}:
+            comments.insertItem(request.form['pub'], {})
+
+        pub = comments.getItem(request.form['pub'])
+        id = shortuuid.uuid()
+        pub.insertProperty(id, generateComment(id, request.form))
         return "200"
     else:
-        return "Error adding user."
+        return "Error adding comment. Verify fields"
 
 
-def generateUser(data={}):
+def generateComment(id, data={}):
     print(data)
-    return {'nome': escape(data['nome']), 'email': escape(data['email']), 'senha': escape(data['senha'])}
+    return {'nome': escape(data['nome']), 'conteudo': escape(data['conteudo']), 'id': id}
+
 
 def closing():
     dbcontroll.save()
+    scheduler.shutdown()
     print("Byebye!")
 
 
-
-@app.before_first_request
+@ app.before_first_request
 def load():
+
     try:
         dbcontroll.load()
     except:
         dbcontroll.makeDatabase()
-    if dbcontroll.documentExists("users") == False:
-        dbcontroll.insertDocument({}, "users")
+    if dbcontroll.documentExists("comments") == False:
+        dbcontroll.insertDocument({}, "comments")
     atexit.register(closing)
+    scheduler.add_job(func=dbcontroll.save,
+                      trigger="interval", seconds=60)
+    scheduler.start()
     print("ok")
+
+if __name__ == "app":
+    app.run(host='0.0.0.0', port=8080)
