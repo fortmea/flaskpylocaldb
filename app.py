@@ -28,15 +28,11 @@ def all():
 
 
 @app.route("/comments/list/")
-def comments():
+async def comments():
     if dbcontroll.documentExists("comments"):
         if request.args.get("id"):
-            data = json.dumps(dbcontroll.getDocument("comments").getItem(
+            return await json.dumps(dbcontroll.getDocument("comments").getItem(
                 request.args['id']).get(), default=pylocaldatabase.databasecontroller.serialize)
-            if data == '{"Err": true}':
-                return {"nope": {}}
-            else:
-                return data
         else:
             return json.dumps(dbcontroll.getDocument("comments").get(), default=pylocaldatabase.databasecontroller.serialize)
     else:
