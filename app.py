@@ -12,7 +12,7 @@ app = Flask(__name__)
 limiter = Limiter(
     app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
+    default_limits=["20000 per day", "1500 per hour"]
 )
 print(__name__)
 
@@ -27,7 +27,6 @@ def all():
     return dbcontroll.getDocument("comments").get()
 
 
-@limiter.limit("15/second", override_defaults=False)
 @app.route("/comments/list/")
 def comments():
     if dbcontroll.documentExists("comments"):
