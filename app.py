@@ -74,7 +74,7 @@ def addcoment():
     if dbcontroll.documentExists("comments") and (len(request.form['nome']) > 0) and (len(request.form['conteudo']) > 0):
         comments = dbcontroll.getDocument("comments")
         print(request.form['pub'])
-        item = comments.getItem(request.form['pub']).get()
+        item = comments.getItem(request.form['pub'])
         if item == 'false':
             comments.insertItem(request.form['pub'], {})
 
