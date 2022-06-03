@@ -27,7 +27,7 @@ def all():
     return dbcontroll.getDocument("comments").get()
 
 
-@limiter.limit("1/second", override_defaults=False)
+@limiter.limit("15/second", override_defaults=False)
 @app.route("/comments/list/")
 def comments():
     if dbcontroll.documentExists("comments"):
