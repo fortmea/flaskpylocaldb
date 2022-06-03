@@ -22,13 +22,8 @@ def main():
     return "Olá, Mundo!"
 
 
-@app.route("/all")
-def all():
-    return dbcontroll.getDocument("comments").get()
-
-
 @app.route("/comments/list/")
-async def comments():
+def comments():
     if dbcontroll.documentExists("comments"):
         if request.args.get("id"):
             data = json.dumps(dbcontroll.getDocument("comments").getItem(
