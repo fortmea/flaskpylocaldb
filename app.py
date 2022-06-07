@@ -8,7 +8,9 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS, cross_origin
 import random
-dbcontroll = pylocaldatabase.databasecontroller(path="database.json")
+keypath = "key.key"
+dbcontroll = pylocaldatabase.databasecontroller(
+    path="db.edb", isEncrypted=True)
 scheduler = BackgroundScheduler()
 app = Flask(__name__)
 CORS(app)
@@ -47,7 +49,7 @@ def comments():
 #        else:
 #            return False
 
-
+@limiter.limit("5/minute", override_defaults=False)
 @app.post("/comments/remove")
 def removeUser():
     try:
@@ -68,20 +70,20 @@ def removeUser():
 #    except:
 #        return "400"
 
-@limiter.limit("1/second", override_defaults=False)
+@limiter.limit("5/minute", override_defaults=False)
 @app.post("/comments")
 def addcoment():
     if dbcontroll.documentExists("comments") and (len(request.form['nome']) > 0) and (len(request.form['conteudo']) > 0):
         comments = dbcontroll.getDocument("comments")
-        #print(request.form['pub'])
+        # print(request.form['pub'])
         item = comments.getItem(request.form['pub'])
-        #print(item)
+        # print(item)
         if item == False:
-            
+
             comments.insertItem(request.form['pub'], {})
-        #print(comments.get())
+        # print(comments.get())
         pub = comments.getItem(request.form['pub'])
-        #print(pub)
+        # print(pub)
         id = shortuuid.uuid()
         pub.insertProperty(id, generateComment(id, request.form))
         return "200"
@@ -95,28 +97,33 @@ def generateComment(id, data={}):
 
 
 def closing():
-    dbcontroll.save()
+    dbcontroll.save_encrypted(keyPath=keypath)
     scheduler.shutdown()
     print("Byebye!")
+
+
+def saveData():
+    dbcontroll.save_encrypted(keyPath=keypath)
 
 
 @ app.before_first_request
 def load():
 
     try:
-        dbcontroll.load()
+        dbcontroll.decryptLoad(keyPath=keypath)
     except:
         dbcontroll.makeDatabase()
     if dbcontroll.documentExists("comments") == False:
         dbcontroll.insertDocument({}, "comments")
     atexit.register(closing)
-    scheduler.add_job(func=dbcontroll.save,
+    scheduler.add_job(func=saveData,
                       trigger="interval", seconds=60)
     scheduler.start()
     print("ok")
 
-if __name__ == "__main__":  
-	app.run( 
-		host='0.0.0.0', 
-		port=random.randint(2000, 9000)  
-	)
+
+if __name__ == "__main__":
+    app.run(
+        host='0.0.0.0',
+        port=random.randint(2000, 9000)
+    )
