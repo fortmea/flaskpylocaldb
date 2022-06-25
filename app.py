@@ -187,6 +187,6 @@ def load():
 if __name__ == "__main__":
     port = 8080
     print("Listening on port - >", port)
-    app.run(host='0.0.0.0', port=port, debug=True)
-    #from waitress import serve
-    #serve(app, host='0.0.0.0', port=port)
+    #app.run(host='0.0.0.0', port=port, debug=True)
+    from waitress import serve
+    serve(app, host='0.0.0.0', port=port)
