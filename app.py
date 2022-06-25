@@ -1,13 +1,17 @@
+import asyncio
 import json
+from os import mkdir, path
+import shutil
 from pylocaldatabase import pylocaldatabase
 import atexit
-from flask import Flask, request, escape
+from flask import Flask, request, escape, send_file
 import shortuuid
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS, cross_origin
-import random
+from requests import get, exceptions
+import moviepy.editor as mp
 keypath = "key.key"
 dbcontroll = pylocaldatabase.databasecontroller(
     path="db.edb", isEncrypted=True)
@@ -17,9 +21,82 @@ CORS(app)
 limiter = Limiter(
     app,
     key_func=get_remote_address,
-    default_limits=["20000 per day", "1500 per hour"]
+    default_limits=["2000 per day", "150 per hour"]
 )
 print(__name__)
+
+
+@app.route("/video")
+def redditvideo():
+    url = request.args.get("url")
+    id = shortuuid.uuid()
+    mkdir(id)
+    asyncio.run(get_video(url,id))
+    shutil.rmtree(id)
+    return send_file("output/"+id+".mp4", mimetype='video/mp4')
+
+def get_user_agent():
+    # some fake one I found :/
+    return 'Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405'
+
+
+async def get_video(url, id):
+    
+    try:  # checks if link is valid
+        r = get(
+            url + '.json',
+            headers={'User-agent': get_user_agent()}
+        )
+    except exceptions.MissingSchema:
+        return('Please provide a valid URL', 'error')
+
+    if 'error' in r.text:
+        if r.status_code == 404:
+            return('Post not found', 'error')
+
+    try:
+        json_data = json.loads(r.text)[0]['data']['children'][0]['data']
+    except json.decoder.JSONDecodeError:
+        return('Post not found', 'error')
+
+    try:  # checks if post contains video
+        video_url = json_data['secure_media']['reddit_video']['fallback_url']
+        video = get(video_url).content
+        
+        with open(id+'/video.mp4', 'wb') as file:
+            file.write(video)
+        audio = get_audio(json_data)
+        with open(id+'/audio.aac', 'wb') as file:
+            file.write(audio)
+        print("ok")
+        return stitch_video(id)
+    except TypeError:
+        return('Only posts with videos are supported', 'error')
+
+
+def get_audio(json_data):
+    try:
+        audio_url = json_data['secure_media']['reddit_video']['hls_url'].split('HLS')[
+            0]
+
+        audio_url += 'HLS_AUDIO_160_K.aac'
+        r = get(audio_url).content
+
+        return r
+    except TypeError:
+        return('No audio found.', 'error')
+
+
+def stitch_video(id):
+    print(id)
+    vid = mp.VideoFileClip(id+"/video.mp4")
+    print("a")
+    aud = mp.AudioFileClip(id+"/audio.aac")
+    print(id)
+    final = vid.set_audio(aud)
+    aud.write_audiofile("output/"+id+".mp3")
+    final.write_videofile("output/"+id+".mp4")
+    return "ok"
 
 
 @app.route("/")
@@ -33,21 +110,13 @@ def comments():
         if request.args.get("id"):
             data = json.dumps(dbcontroll.getDocument("comments").getItem(
                 request.args['id']), default=pylocaldatabase.databasecontroller.serialize)
-            print(data)
+            # print(data)
             return data
         else:
             return json.dumps(dbcontroll.getDocument("comments").get(), default=pylocaldatabase.databasecontroller.serialize)
     else:
         return "No comments found."
 
-
-# def checkUserEmail(email):
-#    users = dbcontroll.getDocument("users").get()
-#    for x in users:
-#        if users.get(x).get()['email'] == email:
-#            return True
-#        else:
-#            return False
 
 @limiter.limit("5/minute", override_defaults=False)
 @app.post("/comments/remove")
@@ -58,17 +127,6 @@ def removeUser():
     except:
         return "400"
 
-
-# @app.post("/users/update")
-# def upduser():
-#    try:
-#        user = dbcontroll.getDocument("users").getItem(request.form['id'])
-#        nUserData = generateComment(request.form)
-#        for x in nUserData:
-#            user.insertProperty(x, nUserData[x])
-#        return "200"
-#    except:
-#        return "400"
 
 @limiter.limit("5/minute", override_defaults=False)
 @app.post("/comments")
@@ -92,7 +150,7 @@ def addcoment():
 
 
 def generateComment(id, data={}):
-    print(data)
+    # print(data)
     return {'nome': escape(data['nome']), 'conteudo': escape(data['conteudo']), 'id': id}
 
 
@@ -104,11 +162,15 @@ def closing():
 
 def saveData():
     dbcontroll.save_encrypted(keyPath=keypath)
-
+    shutil.rmtree(path.dirname(__file__)+"/output")
+    mkdir("output")
 
 @ app.before_first_request
 def load():
-
+    try:
+        mkdir("output")
+    except:
+        True
     try:
         dbcontroll.decryptLoad(keyPath=keypath)
     except:
@@ -119,12 +181,12 @@ def load():
     scheduler.add_job(func=saveData,
                       trigger="interval", seconds=60)
     scheduler.start()
-    print("ok")
+    print("Ok. Database loaded")
 
 
 if __name__ == "__main__":
     port = 8080
     print("Listening on port - >", port)
-    #app.run(host='0.0.0.0', port=port, debug=True)
-    from waitress import serve
-    serve(app, host='0.0.0.0',port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
+    #from waitress import serve
+    #serve(app, host='0.0.0.0', port=port)
