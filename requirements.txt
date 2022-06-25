@@ -1,6 +1,5 @@
 APScheduler==3.9.1
 Flask[async]==2.0.3
-asyncio==3.4.3
 Flask-Limiter==2.4.5
 pylocaldatabase==1.0.6
 shortuuid==1.0.9
