@@ -11,7 +11,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS, cross_origin
 from requests import get, exceptions
-import moviepy.editor as mp
+from moviepy import editor as mov 
 keypath = "key.key"
 dbcontroll = pylocaldatabase.databasecontroller(
     path="db.edb", isEncrypted=True)
@@ -89,9 +89,9 @@ def get_audio(json_data):
 
 def stitch_video(id):
     print(id)
-    vid = mp.VideoFileClip(id+"/video.mp4")
+    vid = mov.VideoFileClip(id+"/video.mp4")
     print("a")
-    aud = mp.AudioFileClip(id+"/audio.aac")
+    aud = mov.AudioFileClip(id+"/audio.aac")
     print(id)
     final = vid.set_audio(aud)
     aud.write_audiofile("output/"+id+".mp3")
