@@ -33,7 +33,7 @@ def redditvideo():
     mkdir(id)
     exec = asyncio.run(get_video(url, id))
     shutil.rmtree(id)
-    if exec:
+    if exec!=False:
         return send_file("output/"+id+".mp4", mimetype='video/mp4')
     else:
         return False
