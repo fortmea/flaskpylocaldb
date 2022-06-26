@@ -67,7 +67,7 @@ async def get_video(url, id):
 
         video = get(video_url)
         videosize = video.headers['content-length']
-        if(videosize >= 225485783):
+        if(int(videosize) >= 225485783):
             return False
 
         videodata = video.content
