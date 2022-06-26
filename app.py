@@ -33,10 +33,12 @@ def redditvideo():
     mkdir(id)
     exec = asyncio.run(get_video(url, id))
     shutil.rmtree(id)
-    if exec!=False:
+    if exec != False:
         return send_file("output/"+id+".mp4", mimetype='video/mp4')
+        
     else:
         return False
+    
 
 def get_user_agent():
     # some fake one I found :/
@@ -78,7 +80,8 @@ async def get_video(url, id):
             file.write(audio)
         print("ok")
         return stitch_video(id)
-    except TypeError:
+    except TypeError as e:
+        print(e)
         return('Only posts with videos are supported', 'error')
 
 
@@ -98,7 +101,6 @@ def get_audio(json_data):
 def stitch_video(id):
     print(id)
     vid = mov.VideoFileClip(id+"/video.mp4")
-    print("a")
     aud = mov.AudioFileClip(id+"/audio.aac")
     print(id)
     final = vid.set_audio(aud)
@@ -173,8 +175,7 @@ def saveData():
     shutil.rmtree(path.dirname(__file__)+"/output")
     mkdir("output")
 
-
-@ app.before_first_request
+@app.before_first_request
 def load():
     try:
         mkdir("output")
@@ -188,7 +189,7 @@ def load():
         dbcontroll.insertDocument({}, "comments")
     atexit.register(closing)
     scheduler.add_job(func=saveData,
-                      trigger="interval", seconds=60)
+                      trigger="interval", seconds=180)
     scheduler.start()
     print("Ok. Database loaded")
 
