@@ -11,7 +11,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS, cross_origin
 from requests import get, exceptions
-from moviepy import editor as mov 
+from moviepy import editor as mov
 keypath = "key.key"
 dbcontroll = pylocaldatabase.databasecontroller(
     path="db.edb", isEncrypted=True)
@@ -31,9 +31,12 @@ def redditvideo():
     url = request.args.get("url")
     id = shortuuid.uuid()
     mkdir(id)
-    asyncio.run(get_video(url,id))
+    exec = asyncio.run(get_video(url, id))
     shutil.rmtree(id)
-    return send_file("output/"+id+".mp4", mimetype='video/mp4')
+    if exec:
+        return send_file("output/"+id+".mp4", mimetype='video/mp4')
+    else:
+        return False
 
 def get_user_agent():
     # some fake one I found :/
@@ -41,7 +44,7 @@ def get_user_agent():
 
 
 async def get_video(url, id):
-    
+
     try:  # checks if link is valid
         r = get(
             url + '.json',
@@ -61,10 +64,15 @@ async def get_video(url, id):
 
     try:  # checks if post contains video
         video_url = json_data['secure_media']['reddit_video']['fallback_url']
-        video = get(video_url).content
-        
+
+        video = get(video_url)
+        videosize = video.headers['content-length']
+        if(videosize >= 225485783):
+            return False
+
+        videodata = video.content
         with open(id+'/video.mp4', 'wb') as file:
-            file.write(video)
+            file.write(videodata)
         audio = get_audio(json_data)
         with open(id+'/audio.aac', 'wb') as file:
             file.write(audio)
@@ -165,6 +173,7 @@ def saveData():
     shutil.rmtree(path.dirname(__file__)+"/output")
     mkdir("output")
 
+
 @ app.before_first_request
 def load():
     try:
@@ -185,7 +194,7 @@ def load():
 
 
 if __name__ == "__main__":
-    port = 8080
+    port = 80
     print("Listening on port - >", port)
     #app.run(host='0.0.0.0', port=port, debug=True)
     from waitress import serve
